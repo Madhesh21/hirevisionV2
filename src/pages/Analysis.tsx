@@ -1,4 +1,5 @@
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +39,7 @@ const Analysis = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header userName="John Doe" showNavigation />
+      <Header userName="John Doe" showNavigation showBackToMain={false} />
 
       <main className="container mx-auto px-6 py-12">
         <div className="mx-auto max-w-5xl">
@@ -133,11 +134,11 @@ const Analysis = () => {
           </Card>
 
           <div className="flex justify-center gap-4">
-            <Button variant="outline" size="lg">
-              Analyze Another Resume
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/upload">Analyze Another Resume</Link>
             </Button>
-            <Button size="lg">
-              Start AI Interview Practice
+            <Button size="lg" asChild>
+              <Link to="/chat">Start AI Interview Practice</Link>
             </Button>
           </div>
         </div>
