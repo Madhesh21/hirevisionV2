@@ -29,7 +29,7 @@ const Chat = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header userName="John Doe" showNavigation />
+      <Header userName="John Doe" showNavigation backToMainUrl="/upload" />
 
       <main className="container mx-auto px-6 py-8">
         <div className="mx-auto max-w-6xl">

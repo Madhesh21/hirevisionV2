@@ -5,9 +5,11 @@ interface HeaderProps {
   showAuth?: boolean;
   userName?: string;
   showNavigation?: boolean;
+  showBackToMain?: boolean;
+  backToMainUrl?: string;
 }
 
-const Header = ({ showAuth = true, userName, showNavigation = false }: HeaderProps) => {
+const Header = ({ showAuth = true, userName, showNavigation = false, showBackToMain = true, backToMainUrl = "/" }: HeaderProps) => {
   return (
     <header className="w-full border-b border-border bg-card">
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
@@ -24,9 +26,11 @@ const Header = ({ showAuth = true, userName, showNavigation = false }: HeaderPro
           
           {showNavigation && (
             <>
-              <Button variant="outline" asChild>
-                <Link to="/">Back to Main</Link>
-              </Button>
+              {showBackToMain && (
+                <Button variant="outline" asChild>
+                  <Link to={backToMainUrl}>Back to Main</Link>
+                </Button>
+              )}
               <Button variant="outline" asChild>
                 <Link to="/chat">AI Interview</Link>
               </Button>

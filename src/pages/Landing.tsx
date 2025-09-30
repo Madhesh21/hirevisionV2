@@ -56,7 +56,7 @@ const Landing = () => {
 
           <div className="flex flex-col items-center gap-4">
             <Button size="lg" className="px-8" asChild>
-              <Link to="/upload">Start Optimizing Your Resume</Link>
+              <Link to="/signup">Start Optimizing Your Resume</Link>
             </Button>
             <p className="text-sm text-muted-foreground">
               Free to get started. No credit card required.
