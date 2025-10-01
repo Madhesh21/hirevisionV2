@@ -1,36 +1,61 @@
 import { useState, useEffect } from 'react';
-
-// Temporary types until Supabase integration is ready
-type User = {
-  id: string;
-  email?: string;
-  user_metadata?: Record<string, any>;
-} | null;
-
-type Session = {
-  user: User;
-} | null;
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User>(null);
-  const [session, setSession] = useState<Session>(null);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
-    // Will be implemented once Supabase Cloud is ready
-    console.log('SignUp will be available once Cloud provisioning completes');
-    return { data: null, error: new Error('Cloud is still provisioning') };
+    const redirectUrl = `${window.location.origin}/upload`;
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          username,
+        },
+      },
+    });
+    
+    return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
-    // Will be implemented once Supabase Cloud is ready
-    console.log('SignIn will be available once Cloud provisioning completes');
-    return { data: null, error: new Error('Cloud is still provisioning') };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    return { data, error };
   };
 
   const signOut = async () => {
-    // Will be implemented once Supabase Cloud is ready
-    return { error: null };
+    const { error } = await supabase.auth.signOut();
+    return { error };
   };
 
   return {
