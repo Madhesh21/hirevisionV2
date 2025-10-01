@@ -1,5 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   showAuth?: boolean;
@@ -10,6 +12,29 @@ interface HeaderProps {
 }
 
 const Header = ({ showAuth = true, userName, showNavigation = false, showBackToMain = true, backToMainUrl = "/" }: HeaderProps) => {
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Signed out successfully!",
+      });
+      navigate('/');
+    }
+  };
+
+  const displayName = userName || user?.user_metadata?.username || user?.email?.split('@')[0];
+
   return (
     <header className="w-full border-b border-border bg-card">
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
@@ -18,9 +43,9 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
         </Link>
 
         <div className="flex items-center gap-4">
-          {userName && (
+          {user && (
             <span className="text-sm text-muted-foreground">
-              Welcome, {userName}
+              Welcome, {displayName}
             </span>
           )}
           
@@ -37,7 +62,7 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
             </>
           )}
 
-          {showAuth && !userName && (
+          {showAuth && !user && (
             <>
               <Button variant="ghost" asChild>
                 <Link to="/signin">Sign In</Link>
@@ -48,8 +73,8 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
             </>
           )}
 
-          {userName && (
-            <Button variant="outline">
+          {user && (
+            <Button variant="outline" onClick={handleLogout}>
               Logout
             </Button>
           )}
