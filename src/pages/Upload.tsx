@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 const Upload = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Header userName="John Doe" showNavigation showBackToMain={false} />
+      <Header showNavigation showBackToMain={false} />
 
       <main className="container mx-auto px-6 py-12">
         <div className="mx-auto max-w-5xl">
