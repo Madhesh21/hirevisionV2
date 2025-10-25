@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { fetchUserAttributes } from 'aws-amplify/auth';
+import { useState, useEffect } from 'react';
 
 interface HeaderProps {
   showAuth?: boolean;
@@ -15,6 +17,13 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [userAttributes, setUserAttributes] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserAttributes().then(setUserAttributes).catch(() => {});
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     const { error } = await signOut();
@@ -33,7 +42,7 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
     }
   };
 
-  const displayName = userName || user?.user_metadata?.username || user?.email?.split('@')[0];
+  const displayName = userName || userAttributes?.name || userAttributes?.email?.split('@')[0] || 'User';
 
   return (
     <header className="w-full border-b border-border bg-card">

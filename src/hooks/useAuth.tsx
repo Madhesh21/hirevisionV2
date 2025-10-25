@@ -1,61 +1,112 @@
 import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { Amplify } from 'aws-amplify';
+import { 
+  signUp as amplifySignUp,
+  signIn as amplifySignIn,
+  signOut as amplifySignOut,
+  getCurrentUser,
+  fetchAuthSession,
+  type AuthUser
+} from 'aws-amplify/auth';
+import { awsConfig } from '@/config/aws-config';
+
+// Initialize Amplify
+Amplify.configure(awsConfig);
+
+interface CognitoSession {
+  idToken?: string;
+  accessToken?: string;
+}
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<CognitoSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Check for existing session on mount
+    checkUser();
   }, []);
 
+  const checkUser = async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      const currentSession = await fetchAuthSession();
+      
+      setUser(currentUser);
+      setSession({
+        idToken: currentSession.tokens?.idToken?.toString(),
+        accessToken: currentSession.tokens?.accessToken?.toString(),
+      });
+    } catch (error) {
+      setUser(null);
+      setSession(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signUp = async (email: string, password: string, username: string) => {
-    const redirectUrl = `${window.location.origin}/upload`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          username,
+    try {
+      const { isSignUpComplete, userId, nextStep } = await amplifySignUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            email,
+            name: username,
+          },
         },
-      },
-    });
-    
-    return { data, error };
+      });
+
+      return { 
+        data: { user: { id: userId } }, 
+        error: null,
+        nextStep 
+      };
+    } catch (error: any) {
+      return { 
+        data: null, 
+        error: { message: error.message || 'Sign up failed' }
+      };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    return { data, error };
+    try {
+      const { isSignedIn, nextStep } = await amplifySignIn({
+        username: email,
+        password,
+      });
+
+      if (isSignedIn) {
+        await checkUser();
+      }
+
+      return { 
+        data: { user }, 
+        error: null,
+        nextStep 
+      };
+    } catch (error: any) {
+      return { 
+        data: null, 
+        error: { message: error.message || 'Sign in failed' }
+      };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+      await amplifySignOut();
+      setUser(null);
+      setSession(null);
+      return { error: null };
+    } catch (error: any) {
+      return { 
+        error: { message: error.message || 'Sign out failed' }
+      };
+    }
   };
 
   return {
