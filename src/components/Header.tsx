@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { fetchUserAttributes } from 'aws-amplify/auth';
+import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from 'react';
 
 interface HeaderProps {
@@ -17,12 +17,31 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [userAttributes, setUserAttributes] = useState<any>(null);
+  const [displayName, setDisplayName] = useState<string>('');
 
   useEffect(() => {
-    if (user) {
-      fetchUserAttributes().then(setUserAttributes).catch(() => {});
-    }
+    const fetchUserProfile = async () => {
+      if (user) {
+        // Try to get username from user metadata first
+        const username = user.user_metadata?.username;
+        if (username) {
+          setDisplayName(username);
+        } else {
+          // Fall back to fetching from profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (profile?.username) {
+            setDisplayName(profile.username);
+          }
+        }
+      }
+    };
+
+    fetchUserProfile();
   }, [user]);
 
   const handleLogout = async () => {
@@ -42,7 +61,7 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
     }
   };
 
-  const displayName = userName || userAttributes?.name || userAttributes?.email?.split('@')[0] || 'User';
+  const finalDisplayName = userName || displayName || 'User';
 
   return (
     <header className="w-full border-b border-border bg-card">
@@ -54,7 +73,7 @@ const Header = ({ showAuth = true, userName, showNavigation = false, showBackToM
         <div className="flex items-center gap-4">
           {user && (
             <span className="text-sm text-muted-foreground">
-              Welcome, {displayName}
+              Welcome, {finalDisplayName}
             </span>
           )}
           

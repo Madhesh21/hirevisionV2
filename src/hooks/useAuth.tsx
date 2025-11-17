@@ -1,69 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Amplify } from 'aws-amplify';
-import { 
-  signUp as amplifySignUp,
-  signIn as amplifySignIn,
-  signOut as amplifySignOut,
-  getCurrentUser,
-  fetchAuthSession,
-  type AuthUser
-} from 'aws-amplify/auth';
-import { awsConfig } from '@/config/aws-config';
-
-// Initialize Amplify
-Amplify.configure(awsConfig);
-
-interface CognitoSession {
-  idToken?: string;
-  accessToken?: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<CognitoSession | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session on mount
-    checkUser();
-  }, []);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
 
-  const checkUser = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      const currentSession = await fetchAuthSession();
-      
-      setUser(currentUser);
-      setSession({
-        idToken: currentSession.tokens?.idToken?.toString(),
-        accessToken: currentSession.tokens?.accessToken?.toString(),
-      });
-    } catch (error) {
-      setUser(null);
-      setSession(null);
-    } finally {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-    }
-  };
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      const { isSignUpComplete, userId, nextStep } = await amplifySignUp({
-        username: email,
+      const { data, error } = await supabase.auth.signUp({
+        email,
         password,
         options: {
-          userAttributes: {
-            email,
-            name: username,
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            username,
           },
         },
       });
 
-      return { 
-        data: { user: { id: userId } }, 
-        error: null,
-        nextStep 
-      };
+      return { data, error };
     } catch (error: any) {
       return { 
         data: null, 
@@ -74,20 +50,12 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { isSignedIn, nextStep } = await amplifySignIn({
-        username: email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
         password,
       });
 
-      if (isSignedIn) {
-        await checkUser();
-      }
-
-      return { 
-        data: { user }, 
-        error: null,
-        nextStep 
-      };
+      return { data, error };
     } catch (error: any) {
       return { 
         data: null, 
@@ -98,10 +66,8 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      await amplifySignOut();
-      setUser(null);
-      setSession(null);
-      return { error: null };
+      const { error } = await supabase.auth.signOut();
+      return { error };
     } catch (error: any) {
       return { 
         error: { message: error.message || 'Sign out failed' }
